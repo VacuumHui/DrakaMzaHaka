@@ -1,7 +1,6 @@
 import { GRID_SIZE } from './map.js';
 
 export const TOWER_TYPES = {
-    // НАСТЕННЫЕ БАШНИ (Строятся на колонках 0-1)
     ARCHER: {
         id: 'ARCHER',
         name: 'Лучник',
@@ -9,7 +8,7 @@ export const TOWER_TYPES = {
         type: 'wall',
         range: 300,
         damage: 15,
-        attackSpeed: 1000, // в миллисекундах
+        attackSpeed: 1000,
         imageKey: 'tower_archer',
         color: '#f1c40f'
     },
@@ -26,7 +25,6 @@ export const TOWER_TYPES = {
         isSplash: true,
         splashRadius: 70
     },
-    // НАЗЕМНЫЕ ПОСТРОЙКИ (Строятся на колонках 2-18, имеют ХП и могут ломаться)
     BARRICADE: {
         id: 'BARRICADE',
         name: 'Баррикада',
@@ -46,7 +44,7 @@ export const TOWER_TYPES = {
         type: 'ground',
         maxHp: 120,
         damage: 8,
-        range: 24, // Ближний радиус (наступает на нее)
+        range: 24,
         attackSpeed: 1200,
         imageKey: 'spikes',
         color: '#7f8c8d'
@@ -65,10 +63,23 @@ export class Tower {
         this.maxHp = config.maxHp || 0;
         
         this.attackCooldown = 0;
+
+        // Переменные анимации для башен/защитников
+        this.animFrame = 0;
+        this.animTime = 0;
+        this.frameCount = 8;
+        this.frameDuration = 120;
     }
 
     update(dT, monsters, spawnProjectile) {
-        if (this.config.damage === 0) return; // Баррикада не атакует
+        // Обновление кадров анимации
+        this.animTime += dT;
+        if (this.animTime >= this.frameDuration) {
+            this.animFrame = (this.animFrame + 1) % this.frameCount;
+            this.animTime = 0;
+        }
+
+        if (this.config.damage === 0) return;
 
         this.attackCooldown -= dT;
         if (this.attackCooldown <= 0) {
@@ -98,7 +109,7 @@ export class Tower {
     takeDamage(amount) {
         if (this.maxHp > 0) {
             this.hp -= amount;
-            return this.hp <= 0; // Возвращает true, если башня уничтожена
+            return this.hp <= 0;
         }
         return false;
     }
@@ -108,15 +119,26 @@ export class Tower {
         const drawY = this.gridY * GRID_SIZE;
         const img = images[this.config.imageKey];
 
-        // Отрисовка спрайта или цветной заглушки
         if (img && img.width > 0 && img.height > 0) {
-            ctx.drawImage(img, drawX, drawY, GRID_SIZE, GRID_SIZE);
+            if (img.width > img.height) {
+                // Если у башни анимационная лента (как у вашего нового солдата)
+                const frameWidth = img.width / this.frameCount;
+                const frameHeight = img.height;
+                const sx = this.animFrame * frameWidth;
+
+                ctx.drawImage(
+                    img,
+                    sx, 0, frameWidth, frameHeight,
+                    drawX, drawY, GRID_SIZE, GRID_SIZE
+                );
+            } else {
+                ctx.drawImage(img, drawX, drawY, GRID_SIZE, GRID_SIZE);
+            }
         } else {
             ctx.fillStyle = this.config.color;
             ctx.fillRect(drawX + 6, drawY + 6, GRID_SIZE - 12, GRID_SIZE - 12);
         }
 
-        // Полоса здоровья только для наземных ломающихся построек
         if (this.maxHp > 0) {
             const barW = GRID_SIZE * 0.8;
             const barH = 5;
