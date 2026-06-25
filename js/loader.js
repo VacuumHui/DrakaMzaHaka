@@ -2,8 +2,9 @@ export const assets = {
     images: {}
 };
 
+// Прописываем пути к картинкам
 const imageSources = {
-    grass: 'assets/images/grass.png',
+    background: 'assets/images/background.png', // Наш новый красивый фон
     wall: 'assets/images/wall.png',
     tower_archer: 'assets/images/tower_archer.png',
     barricade: 'assets/images/barricade.png',
@@ -34,7 +35,6 @@ export function loadAllAssets(onProgress, onComplete) {
             }
         };
         img.onerror = () => {
-            // Если картинка не найдена, создаем пустой холст-заглушку, чтобы игра не крашилась
             console.warn(`Файл ${imageSources[key]} не найден. Создана временная заглушка.`);
             const fallbackCanvas = document.createElement('canvas');
             fallbackCanvas.width = 48;
