@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Оборона Замка: Пиксельный Штурм</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <!-- ЭКРАН ЗАГРУЗКИ -->
+    <div id="loadingScreen">
+        <h1 class="pixel-text">ЗАГРУЗКА РЕСУРСОВ...</h1>
+        <div id="progressBarContainer">
+            <div id="progressBar"></div>
+        </div>
+        <p id="loadingStatus">Ожидание запуска...</p>
+    </div>
+
+    <!-- ИГРОВОЙ ИНТЕРФЕЙС -->
+    <div id="gameContainer" style="display: none;">
+        <canvas id="gameCanvas"></canvas>
+        <div id="controls">
+            <h3 class="pixel-text">🏰 КРЕПОСТЬ 🏰</h3>
+            <div id="playerStats">
+                <div>Стена: <span id="wallHp">500</span> / 500 ❤️</div>
+                <div>Золото: <span id="gold">200</span> 💰</div>
+                <div>Волна: <span id="wave">0</span></div>
+            </div>
+            <hr>
+            <h4 class="pixel-text">Постройка:</h4>
+            <div id="buildMenu"></div>
+            <hr>
+            <div id="actionButton" class="pixel-btn">⚔️ Начать Штурм ⚔️</div>
+            <div id="messages"></div>
+        </div>
+    </div>
+
+    <script type="module" src="js/game.js"></script>
+</body>
+</html>
