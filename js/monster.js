@@ -10,7 +10,7 @@ export const MONSTER_TYPES = {
         goldReward: 8,
         imageKey: 'monster_goblin',
         color: '#2ecc71',
-        evasive: true // Гоблин попробует обойти препятствие, если есть лазейка
+        evasive: true
     },
     ORC: {
         name: 'Орк',
@@ -21,7 +21,7 @@ export const MONSTER_TYPES = {
         goldReward: 15,
         imageKey: 'monster_orc',
         color: '#e67e22',
-        evasive: false // Орк идет напролом и крушит преграды
+        evasive: false
     },
     GOLEM: {
         name: 'Осадочный Голем',
@@ -36,10 +36,9 @@ export const MONSTER_TYPES = {
     }
 };
 
-// Функция поиска монстра, идущего впереди на той же строке
 function getMonsterInFront(monster, allMonsters) {
     let closest = null;
-    let minDist = GRID_SIZE; // Дистанция коллизии (упираются друг в друга)
+    let minDist = GRID_SIZE;
 
     for (let other of allMonsters) {
         if (other === monster || other.health <= 0) continue;
@@ -66,51 +65,55 @@ export class Monster {
         
         this.isAttacking = false;
         this.attackCooldown = 0;
-        this.target = null; // Может быть объектом Tower или строкой 'wall'
+        this.target = null;
+
+        // Переменные для покадровой анимации
+        this.animFrame = 0;
+        this.animTime = 0;
+        this.frameCount = 8;       // Количество кадров в ваших спрайтшитах
+        this.frameDuration = 120;  // Длительность одного кадра в мс
     }
 
     update(dT, towers, allMonsters, damageWall, getTowerAt) {
-        const gridX = Math.floor(this.x / GRID_SIZE);
         const nextGridX = Math.floor((this.x - 10) / GRID_SIZE);
-
         let blocked = false;
         this.target = null;
 
-        // 1. Достиг ли монстр Стены Замка (колонка 1 и левее)
+        // Обновление кадра анимации
+        this.animTime += dT;
+        if (this.animTime >= this.frameDuration) {
+            this.animFrame = (this.animFrame + 1) % this.frameCount;
+            this.animTime = 0;
+        }
+
+        // 1. Проверка Стены Замка
         if (nextGridX <= 1) {
             blocked = true;
             this.isAttacking = true;
             this.target = 'wall';
         }
 
-        // 2. Проверка препятствия-башни на пути
+        // 2. Проверка башни на пути
         if (!blocked) {
             const towerAhead = getTowerAt(nextGridX, this.row);
             if (towerAhead) {
-                // Если гоблин увертливый и соседняя строка свободна — он пробует обойти
                 if (this.config.evasive) {
                     let detourRow = -1;
-                    // Проверяем соседнюю верхнюю строку
                     if (this.row > 0 && !getTowerAt(nextGridX, this.row - 1)) {
                         detourRow = this.row - 1;
-                    }
-                    // Если нет, проверяем нижнюю
-                    else if (this.row < 9 && !getTowerAt(nextGridX, this.row + 1)) {
+                    } else if (this.row < 9 && !getTowerAt(nextGridX, this.row + 1)) {
                         detourRow = this.row + 1;
                     }
 
                     if (detourRow !== -1) {
-                        // Меняем строку и обходим по диагонали
                         this.row = detourRow;
                         this.y = this.row * GRID_SIZE + GRID_SIZE / 2;
                     } else {
-                        // Обход закрыт — атакуем
                         blocked = true;
                         this.isAttacking = true;
                         this.target = towerAhead;
                     }
                 } else {
-                    // Обычный штурмовик — атакуем
                     blocked = true;
                     this.isAttacking = true;
                     this.target = towerAhead;
@@ -118,24 +121,20 @@ export class Monster {
             }
         }
 
-        // 3. Механика ПОМОЩИ СОРОДИЧАМ (групповой штурм)
-        // Если перед монстром стоит его союзник, который уже заблокирован и бьет цель,
-        // этот монстр тоже останавливается и бьет ту же самую цель!
+        // 3. Помощь сородичам
         if (!blocked) {
             const allyAhead = getMonsterInFront(this, allMonsters);
             if (allyAhead && allyAhead.isAttacking && allyAhead.target) {
                 blocked = true;
                 this.isAttacking = true;
-                this.target = allyAhead.target; // Подключаемся к атаке на ту же цель
+                this.target = allyAhead.target;
             }
         }
 
-        // Движение или атака
         if (!blocked) {
             this.isAttacking = false;
             this.x -= this.speed * (dT / 16);
         } else {
-            // Наносим урон раз в определенный кулдаун
             this.attackCooldown -= dT;
             if (this.attackCooldown <= 0) {
                 this.performAttack(damageWall);
@@ -148,7 +147,6 @@ export class Monster {
         if (this.target === 'wall') {
             damageWall(this.config.damage);
         } else if (this.target && typeof this.target === 'object') {
-            // Наносим урон башне, проверяем уничтожена ли она
             const destroyed = this.target.takeDamage(this.config.damage);
             if (destroyed) {
                 this.isAttacking = false;
@@ -165,8 +163,23 @@ export class Monster {
 
         ctx.save();
         if (img && img.width > 0) {
-            ctx.drawImage(img, this.x - size / 2, this.y - size / 2, size, size);
+            // Если это анимационная лента (ширина больше высоты)
+            if (img.width > img.height) {
+                const frameWidth = img.width / this.frameCount;
+                const frameHeight = img.height;
+                const sx = this.animFrame * frameWidth;
+
+                ctx.drawImage(
+                    img, 
+                    sx, 0, frameWidth, frameHeight,              // Откуда вырезаем кадр
+                    this.x - size / 2, this.y - size / 2, size, size // Куда рисуем на карту
+                );
+            } else {
+                // Обычная статичная картинка
+                ctx.drawImage(img, this.x - size / 2, this.y - size / 2, size, size);
+            }
         } else {
+            // Резервный цветной кружок, если картинка не загрузилась
             ctx.fillStyle = this.config.color;
             ctx.beginPath();
             ctx.arc(this.x, this.y, size / 2, 0, Math.PI * 2);
